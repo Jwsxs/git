@@ -1,7 +1,9 @@
-use std::fs;
-use std::fs::File;
+use std::fs::{self, DirEntry, ReadDir};
+use std::fs::{File};
+use std::path::{Path, PathBuf};
 use std::env;
 use std::io::Read;
+use std::ptr::null;
 
 static NG_DIR: &str = "./.ng/";
 
@@ -24,9 +26,35 @@ fn help_msg() -> String {
 // - 2: COMPARE THE TWO BUFFERs THAT THEY MAKE
 // - 3: THEN SWAP THE CURRENT TEMP FILE TO THE NEW ONE
 
-fn _commit() {
+fn read_dir_files(path: &PathBuf) -> Result<(), ()> {
     // FOR EACH FILE, WE'LL DO THE PROCESS DOCUMENTED ABOVE
-    
+    for entry in fs::read_dir(path).unwrap() {
+        let entry = match entry {
+            Ok(f) => f,
+            Err(e) => {
+                std::process::exit(1);
+            }
+        };
+        
+        let path = entry.path();
+        if path.is_file() {
+            println!("\n==\n{}", file_read(&mut File::open(path).unwrap()));
+        } else { // should be a directory and we'd open that as well
+            println!("{}", path.clone().into_os_string().into_string().unwrap());
+            match path.file_name() {
+                Some(name) if name == "target" => {},
+                Some(name) if name == ".git" => {},
+                _ => { read_dir_files(&path); }
+            };
+        }
+    }
+    Ok(())
+}
+
+fn commit() -> Result<(), ()> {
+    // CHECK EVERY FILE POSSIBLE FOR DIFFERENCES
+    read_dir_files(&PathBuf::from("."));
+    Ok(())
     // file_read(); // FOR THE CURRENT SAVED FILE
     // file_read(); // FOR THE CURRENT CHANGED FILE
     // cmp_print_files(); // COMPARE THE TWO GENERATED BUFFERS
@@ -75,7 +103,7 @@ fn main() {
                 fs::create_dir(NG_DIR);
             },
             "commit" => {
-                _commit();
+                commit();
             },
             "kill" => { // KILLS CURRENT NG REPOSITORY
                 fs::remove_dir(NG_DIR); // removing the main directory kills everything
