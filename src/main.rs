@@ -1,15 +1,19 @@
 use std::fs;
 use std::fs::File;
 use std::env;
-use std::io::{Read, Write};
+use std::io::Read;
+
+static NG_DIR: &str = "./.ng/";
 
 fn help_msg() -> String {
-    return { format!("{}:\n{}",
-        "Default usage: \"cargo run [arguments]\"\n",
-        "\nArguments:
-            \n\tinit = initialize a new \'git\' repository on your local machine
-            \n\tcommit = swap the last commited file with your new saved one
-        "
+    return { format!(
+        "Default usage: \"cargo run [arguments]\"\n
+        \nArguments:
+        \tinit = initialize a new \'git\' repository on your local machine ('{}')
+        \tcommit = swap the last commited file with your new saved one
+        \tkill = kills your \'git\' repository. cleans everything on the process
+        ",
+        NG_DIR
     )}
 }
 
@@ -23,7 +27,10 @@ fn help_msg() -> String {
 fn _commit() {
     // FOR EACH FILE, WE'LL DO THE PROCESS DOCUMENTED ABOVE
     
-    file_read();
+    // file_read(); // FOR THE CURRENT SAVED FILE
+    // file_read(); // FOR THE CURRENT CHANGED FILE
+    // cmp_print_files(); // COMPARE THE TWO GENERATED BUFFERS
+    // commit_file_swap(); // COMMIT THE FILE SWAP AND ALSO PRINT THE DIFFERENCES
 }
 
 // SETTING EACH FILE AS A READABLE BUFFER
@@ -44,39 +51,41 @@ fn cmp_print_files() {
 
 }
 
+fn commit_file_swap() {
+    // parse that the commit temp file is indeed existant
+    // the oldf_file ( last commit ) can be shadowed, no problem
+    // since the first check is for the path, we use that as well to check
+    // if the path is leading somewhere
+    /*let oldf_file = match File::open(commit_path) {
+        Ok(f) => f, // file indeed exist
+    };*/
+    
+    // String buffer for first file ( old one )
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut commit_path = String::new();
-    
-    let mut commit_temp_file = File::open(commit_path)?;
+
     // first is "cargo run", second (1) to inf is the indexed arguments => 1 to ..
     let op = match args.get(1) {
         Some(f) => match f.as_str() {
             "init" => {
-                fs::create_dir("./._git/");
+                // WE HAVE TO HAVE A DIRECTORY FOR STORING TEMPORARY COMMIT FILES
+                // AND PROBABLY OTHER STUFF WE'D NEED LATER ON
+                fs::create_dir(NG_DIR);
             },
             "commit" => {
-                commit_temp_file.write()?;
+                _commit();
             },
-            _ => {
-                eprintln!("Missing arguments:, {}", help_msg());
-                std::process::exit(1);
+            "kill" => { // KILLS CURRENT NG REPOSITORY
+                fs::remove_dir(NG_DIR); // removing the main directory kills everything
             }
+            _ => ()
         },
         None => {
             eprintln!("Missing arguments:, {}", help_msg());
             std::process::exit(1);
         }
-    }
+    };
     
-    // parse that the commit temp file is indeed existant
-    // the oldf_file ( last commit ) can be shadowed, no problem
-    // since the first check is for the path, we use that as well to check
-    // if the path is leading somewhere
-    let oldf_file = match File::open(commit_path) {
-        Ok(f) => f, // file indeed exist
-    }
-    
-    // String buffer for first file ( old one )
 }
