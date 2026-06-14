@@ -1,5 +1,4 @@
-use std::fs::{self, DirEntry, ReadDir};
-use std::fs::{File};
+use std::{fs, fs::File};
 use std::path::{Path, PathBuf};
 use std::env;
 use std::io::Read;
@@ -35,12 +34,16 @@ fn read_dir_files(path: &PathBuf) -> Result<(), ()> {
                 std::process::exit(1);
             }
         };
-        
+
+
         let path = entry.path();
         if path.is_file() {
             println!("\n==\n{}", file_read(&mut File::open(path).unwrap()));
         } else { // should be a directory and we'd open that as well
             println!("{}", path.clone().into_os_string().into_string().unwrap());
+
+            // IN CASE OF RUST PROJECTS (cargo), AND ALSO GIT INITIALIZED LOCAL REPOSITORIES
+            // WE BLACKLIST THEM SINCE THEY HAVE A LOT OF FILES
             match path.file_name() {
                 Some(name) if name == "target" => {},
                 Some(name) if name == ".git" => {},
