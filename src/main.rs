@@ -5,11 +5,13 @@ use std::io::Read;
 use std::ptr::null;
 
 static NG_DIR: &str = "./.ng/";
+static HOME_DIR: &str = "./";
+static commit_amnt: u8 = 0;
 
 fn help_msg() -> String {
     return { format!(
         "Default usage: \"cargo run [arguments]\"\n
-        \nArguments:
+        Arguments:
         \tinit = initialize a new \'git\' repository on your local machine ('{}')
         \tcommit = swap the last commited file with your new saved one
         \tkill = kills your \'git\' repository. cleans everything on the process
@@ -25,7 +27,24 @@ fn help_msg() -> String {
 // - 2: COMPARE THE TWO BUFFERs THAT THEY MAKE
 // - 3: THEN SWAP THE CURRENT TEMP FILE TO THE NEW ONE
 
-fn walk_dir_files(path: &PathBuf) -> Result<(), ()> {
+fn iterate_dir(path: &PathBuf, op: Option<&str>) -> Result<(), ()> {
+    let mut _read: bool = false;
+    let mut _write: bool = false;
+    let mut _copy: bool = false;
+    // let op = op.unwrap_or("r");
+    match op {
+        Some(_c) => match _c {
+                "r" => _read = true, // READ-ONLY
+                "w" => _write = true, // WRITE AND READ
+                "c" => _copy = true, // COPY FILES -> SPECIAL FOR INITIALIZING REPO AND NO MORE
+                _ => {}
+        },
+        None => {
+            eprintln!("Dev-focused error: missing walk_dir_files()'s option argument");
+            std::process::exit(1);
+        }
+    };
+
     // FOR EACH FILE, WE'LL DO THE PROCESS DOCUMENTED ABOVE
     for entry in fs::read_dir(path).unwrap() {
         let entry = match entry {
@@ -47,10 +66,11 @@ fn walk_dir_files(path: &PathBuf) -> Result<(), ()> {
             match path.file_name() {
                 Some(name) if name == "target" => {},
                 Some(name) if name == ".git" => {},
-                _ => { walk_dir_files(&path); }
+                _ => { iterate_dir(&path, Some("r")); }
             };
         }
     }
+
     Ok(())
 }
 
@@ -58,7 +78,7 @@ fn commit() -> Result<(), ()> {
     // CHECK EVERY FILE POSSIBLE FOR DIFFERENCES
     // WE SHOULD NOW KEEP THEM SAVED SOMEWHERE AROUND ./.ng, JUST LIKE
     // RECREATIONS OF THE CURRENT PROJECT DIRECTORY
-    walk_dir_files(&PathBuf::from("."));
+    iterate_dir(&PathBuf::from("."), Some("w"));
 
     /*
         ONE THING WE CAN DO TO SAVE THEM FILES WITHOUT TAKING A LOT OF MEMORY
@@ -109,8 +129,8 @@ fn commit_file_swap() {
 }
 
 fn initialize_repo(path: &PathBuf) -> Result<(), ()> {
-    walk_dir_files(path);
-
+    fs::create_dir(NG_DIR);
+    iterate_dir(HOME_DIR, "c");
     Ok(())
 }
 
@@ -123,8 +143,7 @@ fn main() {
             "init" => {
                 // WE HAVE TO HAVE A DIRECTORY FOR STORING TEMPORARY COMMIT FILES
                 // AND PROBABLY OTHER STUFF WE'D NEED LATER ON
-                fs::create_dir(NG_DIR);
-                initialize_repo(NG_DIR);
+                initialize_repo(&PathBuf::from(NG_DIR));
             },
             "commit" => {
                 commit();
