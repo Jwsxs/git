@@ -25,7 +25,7 @@ fn help_msg() -> String {
 // - 2: COMPARE THE TWO BUFFERs THAT THEY MAKE
 // - 3: THEN SWAP THE CURRENT TEMP FILE TO THE NEW ONE
 
-fn read_dir_files(path: &PathBuf) -> Result<(), ()> {
+fn walk_dir_files(path: &PathBuf) -> Result<(), ()> {
     // FOR EACH FILE, WE'LL DO THE PROCESS DOCUMENTED ABOVE
     for entry in fs::read_dir(path).unwrap() {
         let entry = match entry {
@@ -47,7 +47,7 @@ fn read_dir_files(path: &PathBuf) -> Result<(), ()> {
             match path.file_name() {
                 Some(name) if name == "target" => {},
                 Some(name) if name == ".git" => {},
-                _ => { read_dir_files(&path); }
+                _ => { walk_dir_files(&path); }
             };
         }
     }
@@ -56,7 +56,21 @@ fn read_dir_files(path: &PathBuf) -> Result<(), ()> {
 
 fn commit() -> Result<(), ()> {
     // CHECK EVERY FILE POSSIBLE FOR DIFFERENCES
-    read_dir_files(&PathBuf::from("."));
+    // WE SHOULD NOW KEEP THEM SAVED SOMEWHERE AROUND ./.ng, JUST LIKE
+    // RECREATIONS OF THE CURRENT PROJECT DIRECTORY
+    walk_dir_files(&PathBuf::from("."));
+
+    /*
+        ONE THING WE CAN DO TO SAVE THEM FILES WITHOUT TAKING A LOT OF MEMORY
+        IS SAVING EACH BYTE TOGETHER
+
+        FOR EXAMPLE:
+        "abc" => WE HAVE TO SOMEHOW GET A NUMBER FROM THEM 3 BYTES, WHICH WILL BE QUITE UNIQUE
+        say that for example, if we multiply by the index they're placed at the line:
+        65 * 1 + 66 * 2 + 67 * 3 = 398
+        we save 398 as the curnt line value
+        in case it's different, then someone messed with this specific line, those specific 3 chars
+    */
     Ok(())
     // file_read(); // FOR THE CURRENT SAVED FILE
     // file_read(); // FOR THE CURRENT CHANGED FILE
@@ -69,7 +83,7 @@ fn commit() -> Result<(), ()> {
 fn file_read(file: &mut File) -> String {
     let mut buf = [0u8; 1]; // just for comparison with EOF
     let mut c_buf = String::new(); // will store the current file char buffer
-    
+
     while file.read(&mut buf).unwrap() > 0 {
         c_buf.push(buf[0] as char);
     }
@@ -90,8 +104,14 @@ fn commit_file_swap() {
     /*let oldf_file = match File::open(commit_path) {
         Ok(f) => f, // file indeed exist
     };*/
-    
+
     // String buffer for first file ( old one )
+}
+
+fn initialize_repo(path: &PathBuf) -> Result<(), ()> {
+    walk_dir_files(path);
+
+    Ok(())
 }
 
 fn main() {
@@ -104,6 +124,7 @@ fn main() {
                 // WE HAVE TO HAVE A DIRECTORY FOR STORING TEMPORARY COMMIT FILES
                 // AND PROBABLY OTHER STUFF WE'D NEED LATER ON
                 fs::create_dir(NG_DIR);
+                initialize_repo(NG_DIR);
             },
             "commit" => {
                 commit();
